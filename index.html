@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>物件評価項目 優先順位並び替え</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; padding: 2rem 1rem; }
+  #app { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 1.25rem; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+  .toolbar-hint { font-size: 13px; color: #888; }
+  .copy-btn {
+    font-size: 13px; font-weight: 500;
+    padding: 6px 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .copy-btn:hover { background: #f0f0ec; }
+  .copy-btn.copied { color: #2a7d4f; border-color: #2a7d4f; }
+  .list { list-style: none; }
+  .item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    margin-bottom: 4px;
+    border: 1px solid #e0ddd6;
+    border-radius: 8px;
+    background: #fff;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    font-size: 14px;
+    color: #1a1a1a;
+    transition: border-color 0.1s, background 0.1s;
+  }
+  .item:hover { border-color: #bbb; background: #fafaf7; }
+  .item.dragging { opacity: 0.4; }
+  .item.drag-over { border-color: #378add; background: #e6f1fb; }
+  .num { font-size: 12px; color: #aaa; min-width: 22px; text-align: right; }
+  .handle { color: #bbb; font-size: 14px; line-height: 1; cursor: grab; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1c1c1a; color: #f0ede8; }
+    .item { background: #2a2a28; border-color: #3a3a38; color: #f0ede8; }
+    .item:hover { background: #333330; border-color: #555; }
+    .item.drag-over { background: #0c3050; border-color: #378add; }
+    .copy-btn { background: #2a2a28; border-color: #555; color: #f0ede8; }
+    .copy-btn:hover { background: #333330; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>物件評価項目 優先順位</h1>
+  <p class="subtitle">ドラッグで並び替え → コピーして利用</p>
+  <div class="toolbar">
+    <span class="toolbar-hint">ドラッグで並び替え</span>
+    <button class="copy-btn" id="copyBtn" onclick="copyList()">番号付きでコピー</button>
+  </div>
+  <ul class="list" id="list"></ul>
+</div>
+
+<script>
+const items = [
+  "家賃（管理費込み月額）",
+  "広さ（専有面積 m²）",
+  "間取り（部屋数・LDKの広さ）",
+  "収納量（WIC有無・クローゼット数）",
+  "向き（日当たり）",
+  "築年数",
+  "階層（最上階・中階・1階）",
+  "角部屋か否か",
+  "隣接住戸数（四方角部屋・1フロア1世帯など）",
+  "直火コンロか否か（IHか）",
+  "構造（RC > ALC重量鉄骨 > 軽量鉄骨 > 木造）",
+  "床の遮音等級・高遮音床システムの有無",
+  "メーカー・ブランド（積水ハウス・旭化成など）",
+  "ペット時の追加費用（追加敷金・礼金・権利金）",
+  "初期費用総額",
+  "礼金の月数",
+  "敷金の月数",
+  "保証会社費用（初回・継続）",
+  "退去時クリーニング費用（確定コストか否か）",
+  "ネット無料か否か",
+  "最寄り駅までの徒歩分数",
+  "最寄り駅の規模・路線数（急行停車・複数路線）",
+  "新宿までの所要時間",
+  "新宿までの運賃",
+  "乗換回数",
+  "大型スーパーまでの距離・徒歩分数",
+  "業務スーパーの有無・距離",
+  "宅配ボックスの有無",
+  "オートロックの有無",
+  "エアコン設置台数（全室分か否か）",
+  "ZEH・太陽光発電の有無",
+  "エレベーターの有無（2階以上の場合）"
+];
+
+let order = [...items];
+let dragSrc = null;
+
+function render() {
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  order.forEach((text, i) => {
+    const li = document.createElement('li');
+    li.className = 'item';
+    li.draggable = true;
+    li.dataset.index = i;
+    li.innerHTML = `<span class="handle">&#x2807;</span><span class="num">${i + 1}.</span><span>${text}</span>`;
+    li.addEventListener('dragstart', e => {
+      dragSrc = i;
+      li.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    li.addEventListener('dragend', () => {
+      document.querySelectorAll('.item').forEach(el => el.classList.remove('dragging', 'drag-over'));
+    });
+    li.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.item').forEach(el => el.classList.remove('drag-over'));
+      li.classList.add('drag-over');
+    });
+    li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
+    li.addEventListener('drop', e => {
+      e.preventDefault();
+      const dest = parseInt(li.dataset.index);
+      if (dragSrc === dest) return;
+      const moved = order.splice(dragSrc, 1)[0];
+      order.splice(dest, 0, moved);
+      render();
+    });
+    list.appendChild(li);
+  });
+}
+
+function copyList() {
+  const text = order.map((t, i) => `${i + 1}. ${t}`).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'コピーしました';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '番号付きでコピー';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+render();
+</script>
+</body>
+</html>
