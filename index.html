@@ -7,69 +7,67 @@
 </head>
 <body>
 
-<h2 class="sr-only">物件比較ヒートマップ v3 — 9物件を14の判断基準で10段階スコアリング</h2>
 
+<h2 class="sr-only">物件比較ヒートマップ v4 — 10物件を14の判断基準で10段階スコアリング</h2>
 <div style="overflow-x:auto;padding:0.5rem 0;" id="hw"></div>
-
 <div id="leg" style="display:flex;align-items:center;gap:4px;margin-top:10px;flex-wrap:wrap;font-size:11px;color:#6b7280;padding:0 2px;"></div>
-
 <p style="font-size:11px;color:#9ca3af;margin:8px 0 0;line-height:1.7;">
-灰色（—）= データ不明・要調査 　買い物スコアは大型スーパー・ディスカウント店（業務SP・ジェーソン等）の距離と店舗数を総合評価<br>
-加重平均は要調査項目を除外して計算 　設備スコアは宅配BOX・EV・ZEH・食洗機・高遮音・スマートロック等を総合評価
+灰色（—）= データ不明・要調査　／　買い物スコアは大型スーパー・ディスカウント店の距離と店舗数を総合評価<br>
+加重平均は要調査項目を除外して計算　／　設備スコアは宅配BOX・EV・ZEH・食洗機・高遮音・スマートロック等を総合評価
 </p>
-
 <script>
 const C={text:'#111827',mid:'#6b7280',low:'#9ca3af',bg:'#ffffff',bgS:'#f9fafb',bgT:'#f3f4f6',brd:'#e5e7eb',brdM:'#d1d5db'};
 const mukiM={'南':10,'南西':8,'南東':7,'東':5,'北東':2,'北':1};
 const kozoM={'RC':10,'重量鉄骨':8,'ALC鉄骨':7,'鉄骨':6};
 
 const props=[
-  {name:'レデン\n303',        sub:'指扇13分\nJR川越線',       rent:131000,room2:5.5,kozo:'重量鉄骨',wic:1,sic:1,wic2:1,muki:'南',  area:65.94,eki:13,kai:3,tk:3,yr:2026,zeh:2,acA:1, acN:3,   shop:4, shopD:'ライフ7分（2店）',              sets:9, sj:50,sjF:710},
-  {name:'ジェンティーレ\n303', sub:'武蔵藤沢12分\n西武池袋線',rent:146000,room2:6.0,kozo:'重量鉄骨',wic:1,sic:0,wic2:0,muki:'南東',area:64.12,eki:12,kai:3,tk:3,yr:2026,zeh:2,acA:1, acN:3,   shop:10,shopD:'ジェーソン6分〜（5店舗）',     sets:10,sj:45,sjF:650},
-  {name:'ジェンティーレ\n105', sub:'武蔵藤沢12分\n西武池袋線',rent:140000,room2:6.0,kozo:'重量鉄骨',wic:1,sic:0,wic2:0,muki:'南東',area:65.19,eki:12,kai:1,tk:3,yr:2026,zeh:2,acA:1, acN:3,   shop:10,shopD:'ジェーソン6分〜（5店舗）',     sets:10,sj:45,sjF:650},
-  {name:'エクラージュ\n302',   sub:'新座11分\nJR武蔵野線',    rent:130000,room2:5.4,kozo:'鉄骨',    wic:1,sic:0,wic2:0,muki:'南東',area:60.79,eki:11,kai:3,tk:3,yr:2019,zeh:0,acA:-1,acN:null,shop:6, shopD:'ベイシア6分（3店）',             sets:5, sj:44,sjF:618},
-  {name:'カヴァッロ\n303',     sub:'坂戸11分\n東武東上線',    rent:134000,room2:5.6,kozo:'重量鉄骨',wic:1,sic:1,wic2:0,muki:'南',  area:63.21,eki:11,kai:3,tk:3,yr:2025,zeh:2,acA:1, acN:null,shop:4, shopD:'ベルク14分（3店）',             sets:10,sj:58,sjF:690},
-  {name:'Casa a laise\n201',  sub:'多摩境17分\n京王相模原線',rent:132500,room2:5.0,kozo:'ALC鉄骨',wic:1,sic:0,wic2:0,muki:'南',  area:66.78,eki:17,kai:2,tk:2,yr:2023,zeh:0,acA:1, acN:null,shop:9, shopD:'ベルク6分+業務SP10分（3店）',  sets:5, sj:40,sjF:390},
-  {name:'Casa clair\n205',    sub:'久喜13分\n東武伊勢崎線',  rent:140000,room2:5.4,kozo:'ALC鉄骨',wic:1,sic:0,wic2:0,muki:'南西',area:67.98,eki:13,kai:2,tk:2,yr:2026,zeh:1,acA:1, acN:null,shop:4, shopD:'ヨーカドー14分（3店）',          sets:6, sj:49,sjF:902},
-  {name:'パークヒルズ\n1F',    sub:'上尾13分\nJR高崎線',      rent:143000,room2:6.0,kozo:'鉄骨',    wic:1,sic:1,wic2:1,muki:'南西',area:69.37,eki:13,kai:1,tk:3,yr:2020,zeh:0,acA:-1,acN:null,shop:10,shopD:'業務SP2分+イオン10分（2店）',  sets:6, sj:45,sjF:680},
-  {name:'FLORENTINE\nFLOAT 5F',sub:'東川口10分\n武蔵野線',  rent:144000,room2:6.1,kozo:'RC',       wic:1,sic:0,wic2:0,muki:'南',  area:62.08,eki:10,kai:5,tk:5,yr:2023,zeh:0,acA:-1,acN:2,   shop:4, shopD:'西友11分+ジェーソン17分（2店）', sets:6, sj:49,sjF:528},
+  {name:'レデン\n303',         sub:'指扇13分\nJR川越線',       rent:131000,room2:5.5,kozo:'重量鉄骨',wic:1,sic:1,wic2:1,muki:'南',  area:65.94,eki:13,kai:3,tk:3,yr:2026,zeh:2,acA:1, acN:3,   shop:4, shopD:'ライフ7分（2店）',              sets:9, sj:50,sjF:710},
+  {name:'ジェンティーレ\n303',  sub:'武蔵藤沢12分\n西武池袋線',rent:146000,room2:6.0,kozo:'重量鉄骨',wic:1,sic:0,wic2:0,muki:'南東',area:64.12,eki:12,kai:3,tk:3,yr:2026,zeh:2,acA:1, acN:3,   shop:10,shopD:'ジェーソン6分〜（5店舗）',     sets:10,sj:45,sjF:650},
+  {name:'ジェンティーレ\n105',  sub:'武蔵藤沢12分\n西武池袋線',rent:140000,room2:6.0,kozo:'重量鉄骨',wic:1,sic:0,wic2:0,muki:'南東',area:65.19,eki:12,kai:1,tk:3,yr:2026,zeh:2,acA:1, acN:3,   shop:10,shopD:'ジェーソン6分〜（5店舗）',     sets:10,sj:45,sjF:650},
+  {name:'エクラージュ\n302',    sub:'新座11分\nJR武蔵野線',    rent:130000,room2:5.4,kozo:'鉄骨',    wic:1,sic:0,wic2:0,muki:'南東',area:60.79,eki:11,kai:3,tk:3,yr:2019,zeh:0,acA:-1,acN:null,shop:6, shopD:'ベイシア6分（3店）',             sets:5, sj:44,sjF:618},
+  {name:'カヴァッロ\n303',      sub:'坂戸11分\n東武東上線',    rent:134000,room2:5.6,kozo:'重量鉄骨',wic:1,sic:1,wic2:0,muki:'南',  area:63.21,eki:11,kai:3,tk:3,yr:2025,zeh:2,acA:1, acN:null,shop:4, shopD:'ベルク14分（3店）',             sets:10,sj:58,sjF:690},
+  {name:'Casa a laise\n201',   sub:'多摩境17分\n京王相模原線',rent:132500,room2:5.0,kozo:'ALC鉄骨',wic:1,sic:0,wic2:0,muki:'南',  area:66.78,eki:17,kai:2,tk:2,yr:2023,zeh:0,acA:1, acN:null,shop:9, shopD:'ベルク6分+業務SP10分（3店）',  sets:5, sj:40,sjF:390},
+  {name:'Casa clair\n205',     sub:'久喜13分\n東武伊勢崎線',  rent:140000,room2:5.4,kozo:'ALC鉄骨',wic:1,sic:0,wic2:0,muki:'南西',area:67.98,eki:13,kai:2,tk:2,yr:2026,zeh:1,acA:1, acN:null,shop:4, shopD:'ヨーカドー14分（3店）',          sets:6, sj:49,sjF:902},
+  {name:'パークヒルズ\n1F',     sub:'上尾13分\nJR高崎線',      rent:143000,room2:6.0,kozo:'鉄骨',    wic:1,sic:1,wic2:1,muki:'南西',area:69.37,eki:13,kai:1,tk:3,yr:2020,zeh:0,acA:-1,acN:null,shop:10,shopD:'業務SP2分+イオン10分（2店）',  sets:6, sj:45,sjF:680},
+  {name:'FLORENTINE\nFLOAT 5F',sub:'東川口10分\n武蔵野線',   rent:144000,room2:6.1,kozo:'RC',       wic:1,sic:0,wic2:0,muki:'南',  area:62.08,eki:10,kai:5,tk:5,yr:2023,zeh:0,acA:-1,acN:2,   shop:4, shopD:'西友11分+ジェーソン17分（2店）', sets:6, sj:49,sjF:528},
+  {name:'ベル グランツ\n301',   sub:'谷塚19分\n東武伊勢崎線',  rent:145000,room2:6.3,kozo:'重量鉄骨',wic:1,sic:1,wic2:0,muki:'南',  area:69.57,eki:19,kai:3,tk:3,yr:2025,zeh:2,acA:1, acN:3,   shop:7, shopD:'ベルクス2分+業務SP18分（3店）', sets:10,sj:57,sjF:595},
 ];
 
 const crit=[
-  {name:'家賃',         prio:'優先① 重み2',   w:2,
+  {name:'家賃',          prio:'優先① 重み2',  w:2,
    s:p=>Math.round(Math.max(0,Math.min(10,(150000-p.rent)/2500))),
    d:p=>`${(p.rent/10000).toFixed(1)}万円`},
   {name:'間取り\n（洋室小）',prio:'優先② 重み4',w:4,
    s:p=>p.room2===null?null:Math.round(Math.max(0,Math.min(10,(p.room2-5)/2.1*4+6))),
    d:p=>p.room2===null?'詳細不明':`${p.room2}帖`},
-  {name:'構造',         prio:'優先③ 重み4',   w:4,
+  {name:'構造',          prio:'優先③ 重み4',  w:4,
    s:p=>kozoM[p.kozo]||5,
    d:p=>p.kozo},
-  {name:'収納',         prio:'優先④ 重み3',   w:3,
+  {name:'収納',          prio:'優先④ 重み3',  w:3,
    s:p=>p.wic2?10:(p.wic&&p.sic)?9:p.wic?8:4,
    d:p=>p.wic2?'WIC×2':(p.wic&&p.sic)?'WIC+SIC':p.wic?'WIC':'標準'},
-  {name:'向き',         prio:'優先⑤ 重み3',   w:3,
+  {name:'向き',          prio:'優先⑤ 重み3',  w:3,
    s:p=>p.muki?(mukiM[p.muki]||5):null,
    d:p=>p.muki||'不明'},
-  {name:'専有面積',     prio:'優先⑥ 重み3',   w:3,
+  {name:'専有面積',      prio:'優先⑥ 重み3',  w:3,
    s:p=>Math.max(0,Math.min(10,Math.round((p.area-58)/12*10))),
    d:p=>`${p.area}㎡`},
-  {name:'買い物\n環境', prio:'優先⑦ 重み4',   w:4,
+  {name:'買い物\n環境',  prio:'優先⑦ 重み4',  w:4,
    s:p=>p.shop,
    d:p=>p.shopD},
-  {name:'最寄り駅\n徒歩',prio:'優先⑨ 重み2',  w:2,
+  {name:'最寄り駅\n徒歩',prio:'優先⑨ 重み2', w:2,
    s:p=>Math.round(Math.max(0,Math.min(10,10-(p.eki-2)*0.5))),
    d:p=>`${p.eki}分`},
-  {name:'新宿\n所要時間',prio:'優先⑩ 重み2',  w:2,
+  {name:'新宿\n所要時間',prio:'優先⑩ 重み2', w:2,
    s:p=>p.sj===null?null:Math.round(Math.max(0,Math.min(10,(60-p.sj)/2))),
    d:p=>p.sj?`${p.sj}分 / ${p.sjF}円`:'要調査'},
-  {name:'階層',         prio:'優先⑪ 重み2',   w:2,
+  {name:'階層',          prio:'優先⑪ 重み2',  w:2,
    s:p=>p.kai===p.tk?10:p.kai===1?2:6,
    d:p=>`${p.kai}F / ${p.tk}F`},
-  {name:'築年数',       prio:'優先⑫ 重み2',   w:2,
+  {name:'築年数',        prio:'優先⑫ 重み2',  w:2,
    s:p=>({2026:10,2025:9,2023:7,2020:5,2019:4}[p.yr]||5),
    d:p=>`${p.yr}年`},
-  {name:'設備の\n充実度',prio:'重み2',          w:2,
+  {name:'設備の\n充実度',prio:'重み2',         w:2,
    s:p=>p.sets,
    d:p=>'総合評価'},
   {name:'ZEH\n太陽光',  prio:'重み1',          w:1,
@@ -101,7 +99,7 @@ function el(tag,css,html){
 }
 
 const hw=document.getElementById('hw');
-const tbl=el('table','border-collapse:collapse;font-size:11px;min-width:840px;width:100%;');
+const tbl=el('table','border-collapse:collapse;font-size:11px;min-width:960px;width:100%;');
 
 const thead=tbl.createTHead();
 const hr=thead.insertRow();
@@ -109,7 +107,7 @@ hr.appendChild(el('th',
   `text-align:left;padding:6px 10px;background:${C.bgS};border:0.5px solid ${C.brd};font-size:10px;color:${C.mid};position:sticky;left:0;z-index:3;min-width:108px;`,
   '判断基準（優先度）'));
 props.forEach(p=>{
-  const th=el('th',`padding:6px 8px;background:${C.bgS};border:0.5px solid ${C.brd};min-width:82px;vertical-align:bottom;text-align:center;`);
+  const th=el('th',`padding:6px 8px;background:${C.bgS};border:0.5px solid ${C.brd};min-width:80px;vertical-align:bottom;text-align:center;`);
   th.innerHTML=`<div style="font-size:10px;font-weight:500;color:${C.text};white-space:pre-line;line-height:1.35;">${p.name}</div><div style="font-size:9px;font-weight:400;color:${C.mid};white-space:pre-line;line-height:1.3;margin-top:3px;">${p.sub}</div>`;
   hr.appendChild(th);
 });
