@@ -4,155 +4,161 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>物件評価項目 優先順位並び替え</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; padding: 2rem 1rem; }
-  #app { max-width: 640px; margin: 0 auto; }
-  h1 { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
-  .subtitle { font-size: 13px; color: #888; margin-bottom: 1.25rem; }
-  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-  .toolbar-hint { font-size: 13px; color: #888; }
-  .copy-btn {
-    font-size: 13px; font-weight: 500;
-    padding: 6px 16px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    background: #fff;
-    color: #1a1a1a;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-  }
-  .copy-btn:hover { background: #f0f0ec; }
-  .copy-btn.copied { color: #2a7d4f; border-color: #2a7d4f; }
-  .list { list-style: none; }
-  .item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px;
-    margin-bottom: 4px;
-    border: 1px solid #e0ddd6;
-    border-radius: 8px;
-    background: #fff;
-    cursor: grab;
-    user-select: none;
-    font-size: 14px;
-    color: #1a1a1a;
-    transition: border-color 0.1s, background 0.1s;
-  }
-  .item:hover { border-color: #bbb; background: #fafaf7; }
-  .item.dragging { opacity: 0.4; }
-  .item.drag-over { border-color: #378add; background: #e6f1fb; }
-  .num { font-size: 12px; color: #aaa; min-width: 22px; text-align: right; }
-  .handle { color: #bbb; font-size: 14px; line-height: 1; cursor: grab; }
-  @media (prefers-color-scheme: dark) {
-    body { background: #1c1c1a; color: #f0ede8; }
-    .item { background: #2a2a28; border-color: #3a3a38; color: #f0ede8; }
-    .item:hover { background: #333330; border-color: #555; }
-    .item.drag-over { background: #0c3050; border-color: #378add; }
-    .copy-btn { background: #2a2a28; border-color: #555; color: #f0ede8; }
-    .copy-btn:hover { background: #333330; }
-  }
-</style>
 </head>
 <body>
-<div id="app">
-  <h1>物件評価項目 優先順位</h1>
-  <p class="subtitle">ドラッグで並び替え → コピーして利用</p>
-  <div class="toolbar">
-    <span class="toolbar-hint">ドラッグで並び替え</span>
-    <button class="copy-btn" id="copyBtn" onclick="copyList()">番号付きでコピー</button>
-  </div>
-  <ul class="list" id="list"></ul>
-</div>
+
+<h2 class="sr-only">物件比較ヒートマップ v3 — 9物件を14の判断基準で10段階スコアリング</h2>
+
+<div style="overflow-x:auto;padding:0.5rem 0;" id="hw"></div>
+
+<div id="leg" style="display:flex;align-items:center;gap:4px;margin-top:10px;flex-wrap:wrap;font-size:11px;color:#6b7280;padding:0 2px;"></div>
+
+<p style="font-size:11px;color:#9ca3af;margin:8px 0 0;line-height:1.7;">
+灰色（—）= データ不明・要調査 　買い物スコアは大型スーパー・ディスカウント店（業務SP・ジェーソン等）の距離と店舗数を総合評価<br>
+加重平均は要調査項目を除外して計算 　設備スコアは宅配BOX・EV・ZEH・食洗機・高遮音・スマートロック等を総合評価
+</p>
 
 <script>
-const items = [
-  "家賃（管理費込み月額）",
-  "広さ（専有面積 m²）",
-  "間取り（部屋数・LDKの広さ）",
-  "収納量（WIC有無・クローゼット数）",
-  "向き（日当たり）",
-  "築年数",
-  "階層（最上階・中階・1階）",
-  "角部屋か否か",
-  "隣接住戸数（四方角部屋・1フロア1世帯など）",
-  "直火コンロか否か（IHか）",
-  "構造（RC > ALC重量鉄骨 > 軽量鉄骨 > 木造）",
-  "床の遮音等級・高遮音床システムの有無",
-  "メーカー・ブランド（積水ハウス・旭化成など）",
-  "ペット時の追加費用（追加敷金・礼金・権利金）",
-  "初期費用総額",
-  "礼金の月数",
-  "敷金の月数",
-  "保証会社費用（初回・継続）",
-  "退去時クリーニング費用（確定コストか否か）",
-  "ネット無料か否か",
-  "最寄り駅までの徒歩分数",
-  "最寄り駅の規模・路線数（急行停車・複数路線）",
-  "新宿までの所要時間",
-  "新宿までの運賃",
-  "乗換回数",
-  "大型スーパーまでの距離・徒歩分数",
-  "業務スーパーの有無・距離",
-  "宅配ボックスの有無",
-  "オートロックの有無",
-  "エアコン設置台数（全室分か否か）",
-  "ZEH・太陽光発電の有無",
-  "エレベーターの有無（2階以上の場合）"
+const C={text:'#111827',mid:'#6b7280',low:'#9ca3af',bg:'#ffffff',bgS:'#f9fafb',bgT:'#f3f4f6',brd:'#e5e7eb',brdM:'#d1d5db'};
+const mukiM={'南':10,'南西':8,'南東':7,'東':5,'北東':2,'北':1};
+const kozoM={'RC':10,'重量鉄骨':8,'ALC鉄骨':7,'鉄骨':6};
+
+const props=[
+  {name:'レデン\n303',        sub:'指扇13分\nJR川越線',       rent:131000,room2:5.5,kozo:'重量鉄骨',wic:1,sic:1,wic2:1,muki:'南',  area:65.94,eki:13,kai:3,tk:3,yr:2026,zeh:2,acA:1, acN:3,   shop:4, shopD:'ライフ7分（2店）',              sets:9, sj:50,sjF:710},
+  {name:'ジェンティーレ\n303', sub:'武蔵藤沢12分\n西武池袋線',rent:146000,room2:6.0,kozo:'重量鉄骨',wic:1,sic:0,wic2:0,muki:'南東',area:64.12,eki:12,kai:3,tk:3,yr:2026,zeh:2,acA:1, acN:3,   shop:10,shopD:'ジェーソン6分〜（5店舗）',     sets:10,sj:45,sjF:650},
+  {name:'ジェンティーレ\n105', sub:'武蔵藤沢12分\n西武池袋線',rent:140000,room2:6.0,kozo:'重量鉄骨',wic:1,sic:0,wic2:0,muki:'南東',area:65.19,eki:12,kai:1,tk:3,yr:2026,zeh:2,acA:1, acN:3,   shop:10,shopD:'ジェーソン6分〜（5店舗）',     sets:10,sj:45,sjF:650},
+  {name:'エクラージュ\n302',   sub:'新座11分\nJR武蔵野線',    rent:130000,room2:5.4,kozo:'鉄骨',    wic:1,sic:0,wic2:0,muki:'南東',area:60.79,eki:11,kai:3,tk:3,yr:2019,zeh:0,acA:-1,acN:null,shop:6, shopD:'ベイシア6分（3店）',             sets:5, sj:44,sjF:618},
+  {name:'カヴァッロ\n303',     sub:'坂戸11分\n東武東上線',    rent:134000,room2:5.6,kozo:'重量鉄骨',wic:1,sic:1,wic2:0,muki:'南',  area:63.21,eki:11,kai:3,tk:3,yr:2025,zeh:2,acA:1, acN:null,shop:4, shopD:'ベルク14分（3店）',             sets:10,sj:58,sjF:690},
+  {name:'Casa a laise\n201',  sub:'多摩境17分\n京王相模原線',rent:132500,room2:5.0,kozo:'ALC鉄骨',wic:1,sic:0,wic2:0,muki:'南',  area:66.78,eki:17,kai:2,tk:2,yr:2023,zeh:0,acA:1, acN:null,shop:9, shopD:'ベルク6分+業務SP10分（3店）',  sets:5, sj:40,sjF:390},
+  {name:'Casa clair\n205',    sub:'久喜13分\n東武伊勢崎線',  rent:140000,room2:5.4,kozo:'ALC鉄骨',wic:1,sic:0,wic2:0,muki:'南西',area:67.98,eki:13,kai:2,tk:2,yr:2026,zeh:1,acA:1, acN:null,shop:4, shopD:'ヨーカドー14分（3店）',          sets:6, sj:49,sjF:902},
+  {name:'パークヒルズ\n1F',    sub:'上尾13分\nJR高崎線',      rent:143000,room2:6.0,kozo:'鉄骨',    wic:1,sic:1,wic2:1,muki:'南西',area:69.37,eki:13,kai:1,tk:3,yr:2020,zeh:0,acA:-1,acN:null,shop:10,shopD:'業務SP2分+イオン10分（2店）',  sets:6, sj:45,sjF:680},
+  {name:'FLORENTINE\nFLOAT 5F',sub:'東川口10分\n武蔵野線',  rent:144000,room2:6.1,kozo:'RC',       wic:1,sic:0,wic2:0,muki:'南',  area:62.08,eki:10,kai:5,tk:5,yr:2023,zeh:0,acA:-1,acN:2,   shop:4, shopD:'西友11分+ジェーソン17分（2店）', sets:6, sj:49,sjF:528},
 ];
 
-let order = [...items];
-let dragSrc = null;
+const crit=[
+  {name:'家賃',         prio:'優先① 重み2',   w:2,
+   s:p=>Math.round(Math.max(0,Math.min(10,(150000-p.rent)/2500))),
+   d:p=>`${(p.rent/10000).toFixed(1)}万円`},
+  {name:'間取り\n（洋室小）',prio:'優先② 重み4',w:4,
+   s:p=>p.room2===null?null:Math.round(Math.max(0,Math.min(10,(p.room2-5)/2.1*4+6))),
+   d:p=>p.room2===null?'詳細不明':`${p.room2}帖`},
+  {name:'構造',         prio:'優先③ 重み4',   w:4,
+   s:p=>kozoM[p.kozo]||5,
+   d:p=>p.kozo},
+  {name:'収納',         prio:'優先④ 重み3',   w:3,
+   s:p=>p.wic2?10:(p.wic&&p.sic)?9:p.wic?8:4,
+   d:p=>p.wic2?'WIC×2':(p.wic&&p.sic)?'WIC+SIC':p.wic?'WIC':'標準'},
+  {name:'向き',         prio:'優先⑤ 重み3',   w:3,
+   s:p=>p.muki?(mukiM[p.muki]||5):null,
+   d:p=>p.muki||'不明'},
+  {name:'専有面積',     prio:'優先⑥ 重み3',   w:3,
+   s:p=>Math.max(0,Math.min(10,Math.round((p.area-58)/12*10))),
+   d:p=>`${p.area}㎡`},
+  {name:'買い物\n環境', prio:'優先⑦ 重み4',   w:4,
+   s:p=>p.shop,
+   d:p=>p.shopD},
+  {name:'最寄り駅\n徒歩',prio:'優先⑨ 重み2',  w:2,
+   s:p=>Math.round(Math.max(0,Math.min(10,10-(p.eki-2)*0.5))),
+   d:p=>`${p.eki}分`},
+  {name:'新宿\n所要時間',prio:'優先⑩ 重み2',  w:2,
+   s:p=>p.sj===null?null:Math.round(Math.max(0,Math.min(10,(60-p.sj)/2))),
+   d:p=>p.sj?`${p.sj}分 / ${p.sjF}円`:'要調査'},
+  {name:'階層',         prio:'優先⑪ 重み2',   w:2,
+   s:p=>p.kai===p.tk?10:p.kai===1?2:6,
+   d:p=>`${p.kai}F / ${p.tk}F`},
+  {name:'築年数',       prio:'優先⑫ 重み2',   w:2,
+   s:p=>({2026:10,2025:9,2023:7,2020:5,2019:4}[p.yr]||5),
+   d:p=>`${p.yr}年`},
+  {name:'設備の\n充実度',prio:'重み2',          w:2,
+   s:p=>p.sets,
+   d:p=>'総合評価'},
+  {name:'ZEH\n太陽光',  prio:'重み1',          w:1,
+   s:p=>p.zeh===2?10:p.zeh===1?6:0,
+   d:p=>p.zeh===2?'ZEH+太陽光':p.zeh===1?'太陽光のみ':'なし'},
+  {name:'エアコン\n全室',prio:'重み1',          w:1,
+   s:p=>p.acA===null?null:p.acA===1?(p.acN===3?10:8):4,
+   d:p=>p.acA===null?'不明':p.acA===1?`全室(${p.acN||'?'}台)`:`${p.acN||'?'}台のみ`},
+];
 
-function render() {
-  const list = document.getElementById('list');
-  list.innerHTML = '';
-  order.forEach((text, i) => {
-    const li = document.createElement('li');
-    li.className = 'item';
-    li.draggable = true;
-    li.dataset.index = i;
-    li.innerHTML = `<span class="handle">&#x2807;</span><span class="num">${i + 1}.</span><span>${text}</span>`;
-    li.addEventListener('dragstart', e => {
-      dragSrc = i;
-      li.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    li.addEventListener('dragend', () => {
-      document.querySelectorAll('.item').forEach(el => el.classList.remove('dragging', 'drag-over'));
-    });
-    li.addEventListener('dragover', e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      document.querySelectorAll('.item').forEach(el => el.classList.remove('drag-over'));
-      li.classList.add('drag-over');
-    });
-    li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
-    li.addEventListener('drop', e => {
-      e.preventDefault();
-      const dest = parseInt(li.dataset.index);
-      if (dragSrc === dest) return;
-      const moved = order.splice(dragSrc, 1)[0];
-      order.splice(dest, 0, moved);
-      render();
-    });
-    list.appendChild(li);
-  });
+function hcol(s){
+  if(s>=9)return['#0F6E56','#fff'];
+  if(s>=8)return['#1D9E75','#fff'];
+  if(s>=7)return['#9ae6b4','#085041'];
+  if(s>=6)return['#c6f6d5','#276749'];
+  if(s>=5)return['#fefcbf','#744210'];
+  if(s>=4)return['#fbd38d','#7b341e'];
+  if(s>=3)return['#fca5a5','#63171b'];
+  if(s>=2)return['#e53e3e','#fff'];
+  if(s>=1)return['#c53030','#fff'];
+  return['#822727','#fff'];
 }
 
-function copyList() {
-  const text = order.map((t, i) => `${i + 1}. ${t}`).join('\n');
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('copyBtn');
-    btn.textContent = 'コピーしました';
-    btn.classList.add('copied');
-    setTimeout(() => {
-      btn.textContent = '番号付きでコピー';
-      btn.classList.remove('copied');
-    }, 2000);
-  });
+function el(tag,css,html){
+  const e=document.createElement(tag);
+  if(css)e.style.cssText=css;
+  if(html!==undefined)e.innerHTML=html;
+  return e;
 }
 
-render();
+const hw=document.getElementById('hw');
+const tbl=el('table','border-collapse:collapse;font-size:11px;min-width:840px;width:100%;');
+
+const thead=tbl.createTHead();
+const hr=thead.insertRow();
+hr.appendChild(el('th',
+  `text-align:left;padding:6px 10px;background:${C.bgS};border:0.5px solid ${C.brd};font-size:10px;color:${C.mid};position:sticky;left:0;z-index:3;min-width:108px;`,
+  '判断基準（優先度）'));
+props.forEach(p=>{
+  const th=el('th',`padding:6px 8px;background:${C.bgS};border:0.5px solid ${C.brd};min-width:82px;vertical-align:bottom;text-align:center;`);
+  th.innerHTML=`<div style="font-size:10px;font-weight:500;color:${C.text};white-space:pre-line;line-height:1.35;">${p.name}</div><div style="font-size:9px;font-weight:400;color:${C.mid};white-space:pre-line;line-height:1.3;margin-top:3px;">${p.sub}</div>`;
+  hr.appendChild(th);
+});
+
+const tbody=tbl.createTBody();
+crit.forEach(c=>{
+  const tr=tbody.insertRow();
+  const tdL=el('td',
+    `text-align:left;padding:5px 10px;background:#ffffff;border:0.5px solid ${C.brd};white-space:pre-line;font-weight:500;font-size:11px;position:sticky;left:0;z-index:1;border-right:1px solid ${C.brdM};line-height:1.4;color:${C.text};`);
+  tdL.innerHTML=`${c.name}<span style="font-size:9px;font-weight:400;color:${C.low};display:block;line-height:1.3;">${c.prio}</span>`;
+  tr.appendChild(tdL);
+  props.forEach(p=>{
+    const score=c.s(p),disp=c.d(p);
+    const td=tr.insertCell();
+    if(score===null){
+      td.style.cssText=`border:0.5px solid ${C.brd};padding:4px 5px;text-align:center;vertical-align:middle;background:${C.bgS};`;
+      td.innerHTML=`<span style="font-size:13px;color:${C.low};">—</span><span style="font-size:9px;display:block;color:${C.low};margin-top:1px;">${disp}</span>`;
+    }else{
+      const[bg,fg]=hcol(score);
+      td.style.cssText=`border:0.5px solid ${C.brd};padding:4px 5px;text-align:center;vertical-align:middle;background:${bg};`;
+      td.innerHTML=`<span style="font-size:15px;font-weight:500;color:${fg};line-height:1.1;display:block;">${score}</span><span style="font-size:9px;display:block;color:${fg};opacity:0.8;line-height:1.3;margin-top:1px;">${disp}</span>`;
+    }
+  });
+});
+
+const tfoot=tbl.createTFoot();
+const tr2=tfoot.insertRow();
+tr2.appendChild(el('td',
+  `text-align:left;padding:7px 10px;background:${C.bgT};border:0.5px solid ${C.brdM};font-weight:500;font-size:11px;position:sticky;left:0;z-index:1;border-right:1px solid ${C.brdM};color:${C.text};`,
+  '加重平均スコア（参考）'));
+props.forEach(p=>{
+  let ts=0,tw=0;
+  crit.forEach(c=>{const s=c.s(p);if(s!==null){ts+=s*c.w;tw+=c.w;}});
+  const avg=tw>0?ts/tw:0,rd=Math.round(avg*10)/10;
+  const[bg,fg]=hcol(Math.round(avg));
+  const td=tr2.insertCell();
+  td.style.cssText=`border:0.5px solid ${C.brdM};padding:7px 5px;text-align:center;background:${bg};`;
+  td.innerHTML=`<span style="font-size:16px;font-weight:500;color:${fg};">${rd}</span>`;
+});
+
+hw.appendChild(tbl);
+
+const leg=document.getElementById('leg');
+leg.innerHTML=`<span style="margin-right:4px;font-size:11px;color:${C.mid};">スコア:</span>`;
+[[10,'#0F6E56','#fff'],[9,'#1D9E75','#fff'],[7,'#9ae6b4','#085041'],[6,'#c6f6d5','#276749'],[5,'#fefcbf','#744210'],[4,'#fbd38d','#7b341e'],[3,'#fca5a5','#63171b'],[2,'#e53e3e','#fff'],[0,'#822727','#fff']].forEach(([n,bg,fg])=>{
+  leg.innerHTML+=`<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:15px;border-radius:2px;background:${bg};border:0.5px solid rgba(0,0,0,0.08);font-size:10px;color:${fg};font-weight:500;margin-right:1px;">${n}</span>`;
+});
+leg.innerHTML+=`<span style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:15px;border-radius:2px;background:${C.bgS};border:0.5px solid ${C.brd};font-size:10px;color:${C.low};">—</span><span style="font-size:11px;color:${C.mid};">不明</span></span>`;
 </script>
+
 </body>
 </html>
